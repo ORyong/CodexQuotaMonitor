@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+build/
+dist/
+.pytest_cache/
+*.spec
+validation/
+.local-tools/
+.env
+.env.*
+auth.json
+settings.json
+*credentials*.json
+*.log
+*.dmp
+*.pid
