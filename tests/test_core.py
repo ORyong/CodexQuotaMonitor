@@ -129,7 +129,7 @@ class SettingsTests(unittest.TestCase):
     def test_roundtrip_colors_modes_position(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'settings.json'
-            settings = Settings(mode='float', scale=150, background='#24594E', x=-1500, y=30)
+            settings = Settings(mode='float', scale=150, background='#24594E', x=-1500, y=30, display_style='rings', font='lxgw_wenkai')
             settings.save(path)
             self.assertEqual(Settings.load(path), settings)
             self.assertEqual(set(json.loads(path.read_text())), set(settings.__dict__))
@@ -137,7 +137,7 @@ class SettingsTests(unittest.TestCase):
     def test_broken_preferences_use_defaults(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'settings.json'
-            for content in ['not json', 'null', '[]', '{"mode":"bad","scale":999,"background":"bad"}']:
+            for content in ['not json', 'null', '[]', '{"mode":"bad","scale":999,"background":"bad","display_style":"bad","font":"bad"}']:
                 path.write_text(content)
                 self.assertEqual(Settings.load(path), Settings())
 

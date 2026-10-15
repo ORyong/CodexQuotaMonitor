@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import hashlib
+import ctypes
+import ctypes.wintypes as wintypes
 import json
 import os
 from pathlib import Path
@@ -26,6 +28,63 @@ def run(exe, args, env=None, timeout=40):
         raise AssertionError('Application exited with ' + str(result.returncode))
 
 
+
+def settings_native_state(pid):
+    user32 = ctypes.WinDLL('user32', use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsIconic.argtypes = [wintypes.HWND]
+    rows = []
+    @callback_type
+    def inspect(hwnd, _):
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        if owner.value == pid:
+            title = ctypes.create_unicode_buffer(512)
+            user32.GetWindowTextW(hwnd, title, len(title))
+            if title.value.startswith('Codex') and '设置' in title.value:
+                rows.append({'visible': bool(user32.IsWindowVisible(hwnd)),
+                             'minimized': bool(user32.IsIconic(hwnd))})
+        return True
+    user32.EnumWindows(inspect, 0)
+    return rows
+
+
+def wait_for_visible_settings(pid):
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        rows = settings_native_state(pid)
+        if any(row['visible'] and not row['minimized'] for row in rows):
+            return
+        time.sleep(.05)
+    raise AssertionError('Settings window is not natively visible: ' + repr(rows))
+
+
+def verify_settings_startups(exe, results):
+    for hidden in (True, False):
+        label = 'hidden' if hidden else 'normal'
+        settings_path = VALIDATION / ('settings-startup-' + label) / 'settings.json'
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        settings_path.write_text(json.dumps({'mode':'tray'}), encoding='utf-8')
+        startup = subprocess.STARTUPINFO()
+        startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup.wShowWindow = 0 if hidden else 1
+        process = subprocess.Popen([str(exe), '--settings-path', str(settings_path), '--settings'],
+            startupinfo=startup, creationflags=subprocess.CREATE_NO_WINDOW)
+        try:
+            wait_for_visible_settings(process.pid)
+            results['settings_' + label + '_startup_native_visible'] = True
+            run(exe, ['--settings-path', settings_path, '--settings'], timeout=6)
+            wait_for_visible_settings(process.pid)
+            results['settings_' + label + '_reopen_native_visible'] = True
+        finally:
+            run(exe, ['--settings-path', settings_path, '--quit'], timeout=6)
+            process.wait(timeout=20)
+
+
 def main():
     archive = ROOT / 'dist' / f'CodexQuotaMonitor-{VERSION}-Windows-x64.zip'
     destination = VALIDATION/'最终 中文空格 解压验收'
@@ -47,12 +106,15 @@ def main():
         results['runs'].append({'name':label,'checks_passed':len(report['checks']),
             'actual_device_pixel_ratio':report['screens'][0]['device_pixel_ratio'],
             'physical_screens':len(report['screens']),'all_passed':True})
+    verify_settings_startups(exe, results)
     settings_path = VALIDATION/'single-instance/settings.json'
     first=subprocess.Popen([str(exe),'--settings-path',str(settings_path),'--settings'],creationflags=subprocess.CREATE_NO_WINDOW)
     try:
         time.sleep(1)
         assert first.poll() is None
+        wait_for_visible_settings(first.pid)
         run(exe,['--settings-path',settings_path,'--settings'],timeout=6)
+        wait_for_visible_settings(first.pid)
         assert first.poll() is None
         results['single_instance_second_process_exits']=True
         run(exe,['--settings-path',settings_path,'--startup'],timeout=6)

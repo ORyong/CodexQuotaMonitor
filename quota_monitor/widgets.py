@@ -5,9 +5,9 @@ from PySide6.QtWidgets import (QAbstractSpinBox,QComboBox,QDialog,QFrame,QGridLa
  QHBoxLayout,QLabel,QLineEdit,QListView,QPushButton,QSlider,QSpinBox,QVBoxLayout)
 
 
-def component_style(assets):
+def component_style(assets, family="Noto Sans SC"):
     sheet="""
-    QWidget { font-family: 'Noto Sans SC'; font-size: 12px; color: #3E4753; }
+    QWidget { font-family: '@FAMILY@'; font-size: 12px; color: #3E4753; }
     QDialog { background: #F5F6F8; }
     QToolTip { background: #FFFFFF; color: #43516A; border: 1px solid #DDE4EE; padding: 6px 9px; border-radius: 6px; }
     QFrame#stepper { background: #FAFBFD; border: 1px solid #DDE4EE; border-radius: 8px; }
@@ -51,7 +51,7 @@ def component_style(assets):
     QPushButton#cancelButton { background: transparent; color: #67727F; border: 1px solid #D7DFEC; border-radius: 7px; padding: 7px 16px; }
     QPushButton#cancelButton:hover { background: #E8EDF5; }
     """
-    return sheet.replace('@DOWN@',(assets/'chevron-down.svg').as_posix()).replace('@CHECK@',(assets/'check-white.svg').as_posix()).replace('@CHECKBLUE@',(assets/'check-blue.svg').as_posix())
+    return sheet.replace('@FAMILY@', family).replace('@DOWN@',(assets/'chevron-down.svg').as_posix()).replace('@CHECK@',(assets/'check-white.svg').as_posix()).replace('@CHECKBLUE@',(assets/'check-blue.svg').as_posix())
 
 
 class Stepper(QFrame):

@@ -148,6 +148,26 @@ def start_self_test(controller, output: Path):
             QTest.mouseClick(controller.taskbar, Qt.MouseButton.LeftButton, pos=QPoint(50,17))
             controller.app.processEvents()
             record('taskbar_click_shows_details', controller.popup.isVisible())
+            def settings_native_visible():
+                dialog = controller.settings_dialog
+                return bool(dialog and dialog.isVisible() and not dialog.isMinimized()
+                            and controller.dock.native.user.IsWindowVisible(int(dialog.winId())))
+            QTest.mouseClick(controller.popup.settings_button, Qt.MouseButton.LeftButton)
+            controller.app.processEvents()
+            record('settings_from_taskbar_details_native_visible', settings_native_visible())
+            controller.settings_dialog.showMinimized()
+            controller.app.processEvents()
+            controller.settings_action.trigger()
+            controller.app.processEvents()
+            record('settings_reopen_restores_minimized', settings_native_visible())
+            controller.settings_dialog.reject()
+            controller.menu.popup(controller.app.primaryScreen().availableGeometry().center())
+            controller.app.processEvents()
+            QTest.mouseClick(controller.menu, Qt.MouseButton.LeftButton,
+                             pos=controller.menu.actionGeometry(controller.settings_action).center())
+            controller.app.processEvents()
+            record('settings_from_context_menu_native_visible', settings_native_visible())
+            controller.settings_dialog.reject()
             controller.popup.hide()
             restore_width=controller.dock.native.baseline[2]
             for mode in ('tray', 'float', 'both'):
@@ -157,6 +177,11 @@ def start_self_test(controller, output: Path):
                     record('taskbar_gap_restored_on_mode_switch', controller.dock.native.rect(controller.dock.native.rebar)[2]==restore_width)
                 record('mode_' + mode, controller.tray.isVisible() == (mode != 'float')
                        and controller.float.isVisible() == (mode != 'tray'))
+                controller.show_details()
+                QTest.mouseClick(controller.popup.settings_button, Qt.MouseButton.LeftButton)
+                controller.app.processEvents()
+                record('settings_from_details_' + mode, settings_native_visible())
+                controller.settings_dialog.reject()
             controller.float.grab().save(str(output / 'capsule-live.png'))
             screenshots.append('capsule-live.png')
             controller.show_details()
@@ -225,6 +250,40 @@ def start_self_test(controller, output: Path):
                 record('scale_' + str(scale), controller.float.width() == round(112 * scale / 100))
                 controller.float.grab().save(str(output / f'capsule-scale-{scale}.png'))
             controller.apply_settings(replace(controller.settings, scale=100))
+            from .fonts import FONT_OPTIONS, FONT_IDS, family
+            from .rings import ring_data
+            from PySide6.QtGui import QFontInfo
+            controller.open_settings()
+            dialog = controller.settings_dialog
+            dialog.display_style.setCurrentIndex(dialog.display_style.findData('rings'))
+            dialog.save()
+            controller.app.processEvents()
+            record('rings_style_persisted', Settings.load(controller.settings_path).display_style == 'rings')
+            record('rings_float_size', controller.float.size() == QSize(144,68))
+            record('rings_values_match_live', tuple(row['value'] for row in ring_data(controller.state)) == controller.state.values)
+            controller.float.grab().save(str(output/'rings-live.png'))
+            controller.set_mode('taskbar')
+            controller.app.processEvents()
+            record('rings_taskbar_inside_shell', controller.dock.diagnostic()['inside_taskbar'] and controller.dock.diagnostic()['no_overlap'])
+            controller.taskbar.grab().save(str(output/'rings-taskbar.png'))
+            controller.set_mode('both')
+            for font_key in FONT_OPTIONS:
+                record('font_loaded_' + font_key, FONT_IDS.get(font_key,-1) >= 0)
+                controller.open_settings()
+                dialog = controller.settings_dialog
+                dialog.font_choice.setCurrentIndex(dialog.font_choice.findData(font_key))
+                record('font_live_preview_' + font_key, dialog.preview.settings.font == font_key)
+                dialog.save()
+                controller.app.processEvents()
+                record('font_saved_' + font_key, Settings.load(controller.settings_path).font == font_key
+                       and QFontInfo(controller.app.font()).family() == family(font_key))
+                controller.float.grab().save(str(output/('rings-font-'+font_key+'.png')))
+            controller.open_settings()
+            controller.app.processEvents()
+            record('rings_settings_fit_screen', any(s.availableGeometry().contains(controller.settings_dialog.frameGeometry()) for s in controller.app.screens()))
+            controller.settings_dialog.grab().save(str(output/'settings-rings.png'))
+            controller.settings_dialog.reject()
+            controller.apply_settings(replace(controller.settings, font='noto', display_style='capsule'))
             values = controller.state.values
             controller.state.failure('网络连接失败，请稍后刷新')
             controller.render()

@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import re
 from .timezones import valid_timezone
+from .fonts import FONT_OPTIONS
 
 PRESETS = {
     "蓝灰 · 参考配色": ("#485F87", "#E9EDF7", "#E9EDF7"),
@@ -26,6 +27,8 @@ def default_settings_path() -> Path:
 @dataclass
 class Settings:
     mode: str = "taskbar"
+    display_style: str = "capsule"
+    font: str = "noto"
     scale: int = 100
     background: str = "#485F87"
     text: str = "#E9EDF7"
@@ -48,6 +51,10 @@ class Settings:
                 result.timezone = data["timezone"]
             if data.get("mode") in MODES:
                 result.mode = data["mode"]
+            if data.get("display_style") in ("capsule", "rings"):
+                result.display_style = data["display_style"]
+            if data.get("font") in FONT_OPTIONS:
+                result.font = data["font"]
             for name, lower, upper in [("scale", 75, 200), ("refresh_seconds", 30, 3600)]:
                 value = data.get(name)
                 if isinstance(value, int) and not isinstance(value, bool) and lower <= value <= upper:

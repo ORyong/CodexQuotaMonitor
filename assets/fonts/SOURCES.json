@@ -1,0 +1,74 @@
+[
+  {
+    "file": "LXGWWenKai-OFL.txt",
+    "source": "https://raw.githubusercontent.com/lxgw/LxgwWenKai/main/OFL.txt",
+    "sha256": "1a25e35da1031c6c3436fde545bb9cb5aca954e9873afe510c834b8b79bd21a0",
+    "size": 5171
+  },
+  {
+    "file": "LXGWWenKai-Regular.ttf",
+    "source": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.522/LXGWWenKai-Regular.ttf",
+    "sha256": "39ad71264b588165b469e35e6afb162a378dacd1f95348160240ba9038ac3009",
+    "size": 25575676
+  },
+  {
+    "file": "SmileySans-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/atelier-anchor/smiley-sans/main/LICENSE",
+    "sha256": "9401f4050f1b66c26b6ccdc8b0e14a3c1cc37aac122eda84386f25854a9bec72",
+    "size": 4422
+  },
+  {
+    "file": "SmileySans-Oblique.ttf",
+    "source": "https://github.com/atelier-anchor/smiley-sans/releases/download/v2.0.1/smiley-sans-v2.0.1.zip",
+    "sha256": "b447d7e781f08bc95c4c9f23ba71ed2b8ebb639aa7184485c71c4ca5afcd25c4",
+    "size": 2629764
+  },
+  {
+    "file": "SourceHanSans-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/adobe-fonts/source-han-sans/master/LICENSE.txt",
+    "sha256": "fcac737e761ec63dbfbdce11030a1780161920d80315edba9c8beff1c2bac5a2",
+    "size": 4463
+  },
+  {
+    "file": "SourceHanSansCN-Regular.otf",
+    "source": "https://github.com/adobe-fonts/source-han-sans/releases/download/2.005R/19_SourceHanSansCN.zip",
+    "sha256": "e2bc8a2e7f37474b774fff8db758681ece40bb6947a90d571bce9dd60671a8e4",
+    "size": 8429224
+  },
+  {
+    "file": "SourceHanSerif-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/adobe-fonts/source-han-serif/master/LICENSE.txt",
+    "sha256": "9ff5bb567e1b92c801fc1069e5fbf992ff8efccacb9db94e5959a5b3ba9bb903",
+    "size": 4463
+  },
+  {
+    "file": "SourceHanSerifCN-Regular.otf",
+    "source": "https://github.com/adobe-fonts/source-han-serif/releases/download/2.003R/14_SourceHanSerifCN.zip",
+    "sha256": "3754ea669c530e2473354f8f6d9f79680a44d7e26ec7d00eeabee4a7e0753c5d",
+    "size": 11626108
+  },
+  {
+    "file": "ZCOOLKuaiLe-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolkuaile/OFL.txt",
+    "sha256": "538078469839b4a2e7ad22bef4ebe41681a4e53749bb2a072144024f1d6d703d",
+    "size": 4398
+  },
+  {
+    "file": "ZCOOLKuaiLe-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolkuaile/ZCOOLKuaiLe-Regular.ttf",
+    "sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d",
+    "size": 1514968
+  },
+  {
+    "file": "ZCOOLXiaoWei-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolxiaowei/OFL.txt",
+    "sha256": "a094514ca57cf8f9c5e8d8d1adab5d8cd3a377297ff016f9df2c05b3ecd77f0a",
+    "size": 4400
+  },
+  {
+    "file": "ZCOOLXiaoWei-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolxiaowei/ZCOOLXiaoWei-Regular.ttf",
+    "sha256": "a42b620140f493db42f741351dfbf343c0936d58588ee8004b8b2a218d997ff1",
+    "size": 6313808
+  }
+]

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
+import ctypes.wintypes as wintypes
 import hashlib
 import json
 import math
@@ -30,6 +32,9 @@ from .widgets import Stepper, ModernComboBox, ColorPicker, component_style
 from .timezones import TIMEZONES, valid_timezone, available_timezones
 
 APP_NAME = 'Codex 额度'
+from .fonts import FONT_OPTIONS, FONT_IDS, register_fonts, family, make_font
+from .rings import draw_rings
+
 UI_FONT = 'Noto Sans SC'
 
 
@@ -135,7 +140,8 @@ class Capsule(QWidget):
             flags |= Qt.WindowType.WindowStaysOnTopHint
         if self.windowFlags() != flags:
             self.setWindowFlags(flags)
-        self.setFixedSize(round(112 * self.settings.scale / 100), round(48 * self.settings.scale / 100))
+        width, height = (144, 68) if self.settings.display_style == "rings" else (112, 48)
+        self.setFixedSize(round(width * self.settings.scale / 100), round(height * self.settings.scale / 100))
         self.logo = mark(self.settings.icon, 128)
         if visible:
             self.show()
@@ -150,16 +156,17 @@ class Capsule(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if self.settings.display_style == "rings":
+            painter.scale(self.width() / 144, self.height() / 68)
+            draw_rings(painter, self.settings, self.state)
+            painter.end()
+            return
         painter.scale(self.width() / 112, self.height() / 48)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(self.settings.background))
         painter.drawRoundedRect(QRectF(0, 0, 112, 48), 24, 24)
         painter.drawPixmap(QRectF(10, 10, 28, 28), self.logo, QRectF(self.logo.rect()))
-        font = QFont(UI_FONT, 13)
-        font.setWeight(QFont.Weight.DemiBold)
-        font.setVariableAxis(QFont.Tag.fromString('wght'), 600)
-        # Pixel size keeps the intended proportions independent of the monitor's DPI.
-        font.setPixelSize(18)
+        font = make_font(self.settings.font, 18, 600)
         painter.setFont(font)
         painter.setPen(QColor(self.settings.text))
         for value, top in zip(self.state.values, (4, 24)):
@@ -227,14 +234,19 @@ class TaskbarCapsule(Capsule):
         painter=QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.scale(self.width()/104,self.height()/34)
+        if self.settings.display_style == "rings":
+            draw_rings(painter, self.settings, self.state, compact=True)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(self.settings.background))
+            painter.drawEllipse(QRectF(1,5,24,24))
+            painter.drawPixmap(QRectF(4,8,18,18),self.logo,QRectF(self.logo.rect()))
+            painter.end()
+            return
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(self.settings.background))
         painter.drawRoundedRect(QRectF(0,0,104,34),16,16)
         painter.drawPixmap(QRectF(9,6,22,22),self.logo,QRectF(self.logo.rect()))
-        font=QFont(UI_FONT)
-        font.setPixelSize(14)
-        font.setWeight(QFont.Weight.DemiBold)
-        font.setVariableAxis(QFont.Tag.fromString('wght'), 600)
+        font=make_font(self.settings.font,14,600)
         painter.setFont(font)
         painter.setPen(QColor(self.settings.text))
         for value,top in zip(self.state.values,(1,17)):
@@ -301,10 +313,10 @@ class DetailPopup(QFrame):
         buttons = QHBoxLayout()
         self.refresh = QPushButton('立即刷新')
         self.refresh.clicked.connect(self.refreshRequested)
-        settings = QPushButton('设置')
-        settings.clicked.connect(self.settingsRequested)
+        self.settings_button = QPushButton('设置')
+        self.settings_button.clicked.connect(self.settingsRequested)
         buttons.addWidget(self.refresh)
-        buttons.addWidget(settings)
+        buttons.addWidget(self.settings_button)
         outer.addLayout(buttons)
 
     def render_state(self, state: QuotaState, settings: Settings):
@@ -399,7 +411,7 @@ class SettingsDialog(QDialog):
         self.quota_state = quota_state or QuotaState()
         self.setStyleSheet("""
             QDialog#settingsDialog { background: #F5F6F8; }
-            QWidget { font-family: 'Noto Sans SC'; font-size: 12px; color: #3E4753; }
+            QWidget { font-size: 12px; color: #3E4753; }
             QLabel { background: transparent; }
             QLabel#muted { color: #707985; font-size: 11px; }
             QLabel#cardTitle { color: #323B47; font-size: 12px; font-weight: 600; }
@@ -445,10 +457,27 @@ class SettingsDialog(QDialog):
         left.setObjectName('settingsCard')
         left_layout = QVBoxLayout(left)
         left_layout.setContentsMargins(16, 14, 16, 14)
-        left_layout.setSpacing(10)
+        left_layout.setSpacing(7)
         label = QLabel('显示与启动')
         label.setObjectName('cardTitle')
         left_layout.addWidget(label)
+        self.display_style = ModernComboBox()
+        self.display_style.addItem('胶囊', 'capsule')
+        self.display_style.addItem('双圆环', 'rings')
+        self.display_style.setCurrentIndex(self.display_style.findData(settings.display_style))
+        self.display_style.setFixedWidth(142)
+        self.display_style.currentIndexChanged.connect(self.update_display_preview)
+        row = QHBoxLayout(); row.addWidget(QLabel('显示形式')); row.addStretch(); row.addWidget(self.display_style)
+        left_layout.addLayout(row)
+        self.font_choice = ModernComboBox()
+        for key, (name, _) in FONT_OPTIONS.items():
+            self.font_choice.addItem(name, key)
+            self.font_choice.setItemData(self.font_choice.count()-1, make_font(key), Qt.ItemDataRole.FontRole)
+        self.font_choice.setCurrentIndex(self.font_choice.findData(settings.font))
+        self.font_choice.setFixedWidth(142)
+        self.font_choice.currentIndexChanged.connect(self.update_display_preview)
+        row = QHBoxLayout(); row.addWidget(QLabel('字体')); row.addStretch(); row.addWidget(self.font_choice)
+        left_layout.addLayout(row)
         self.scale = Stepper()
         self.scale.setRange(75, 200)
         self.scale.setSuffix(' %')
@@ -472,9 +501,6 @@ class SettingsDialog(QDialog):
         separator.setFixedHeight(1)
         separator.setStyleSheet('background: #EDF0F6; border: 0;')
         left_layout.addWidget(separator)
-        label = QLabel('刷新')
-        label.setObjectName('cardTitle')
-        left_layout.addWidget(label)
         self.interval = Stepper()
         self.interval.setRange(30, 3600)
         self.interval.setSuffix(' 秒')
@@ -566,7 +592,7 @@ class SettingsDialog(QDialog):
         self.error_label.hide()
         root.addWidget(self.error_label)
         footer = QHBoxLayout()
-        footnote = QLabel('配色与显示设置保存在本机')
+        footnote = QLabel('设置保存在本机')
         footnote.setObjectName('muted')
         footer.addWidget(footnote)
         footer.addStretch()
@@ -581,14 +607,17 @@ class SettingsDialog(QDialog):
         footer.addWidget(self.save_button)
         root.addLayout(footer)
         self.update_colors()
+        self.update_display_preview()
         self.update_size_label()
         self.set_quota_state(self.quota_state)
         self.layout().activate()
         self.adjustSize()
         screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
         area = screen.availableGeometry()
-        self.move(constrain(area.center() - QPoint(self.width() // 2, self.height() // 2),
-                            self.size(), [area.adjusted(8, 32, -8, -8)]))
+        self.winId()  # Obtain the real native frame margins before positioning.
+        frame_size = self.frameGeometry().size()
+        self.move(constrain(area.center() - QPoint(frame_size.width() // 2, frame_size.height() // 2),
+                            frame_size, [area.adjusted(4, 4, -4, -4)]))
 
     def set_quota_state(self, state):
         self.quota_state = state
@@ -597,10 +626,23 @@ class SettingsDialog(QDialog):
         if state.error:
             self.preview_note.setText('额度暂不可用' if not state.snapshot else '上次额度 · 已过期')
 
+    def update_display_preview(self, *args):
+        if not hasattr(self, 'preview'):
+            return
+        self.pending.display_style = self.display_style.currentData()
+        self.pending.font = self.font_choice.currentData()
+        width, height = (144, 68) if self.pending.display_style == 'rings' else (112, 48)
+        self.preview.setFixedSize(width, height)
+        self.preview.update()
+        self.setStyleSheet(self.styleSheet().split('/* chosen font */')[0]
+            + "/* chosen font */ QWidget { font-family: '" + family(self.pending.font) + "'; }")
+        self.update_size_label()
+
     def update_size_label(self, *args):
         if hasattr(self, 'size_label'):
             scale = self.scale.value() / 100
-            self.size_label.setText(f'实际尺寸 {round(112 * scale)} × {round(48 * scale)}')
+            width, height = (144, 68) if self.pending.display_style == 'rings' else (112, 48)
+            self.size_label.setText(f'实际尺寸 {round(width * scale)} × {round(height * scale)}')
 
     def update_colors(self):
         current = (self.pending.background, self.pending.text, self.pending.icon)
@@ -634,6 +676,8 @@ class SettingsDialog(QDialog):
             self.update_colors()
 
     def save(self):
+        self.pending.display_style = self.display_style.currentData()
+        self.pending.font = self.font_choice.currentData()
         self.pending.mode = self.mode.currentData()
         self.pending.scale = self.scale.value()
         self.pending.topmost = self.topmost.isChecked()
@@ -651,6 +695,7 @@ class Controller(QObject):
         self.app = app
         self.settings_path = settings_path
         self.settings = Settings.load(settings_path)
+        self.apply_font()
         self.startup = StartupManager()
         self.settings.autostart = self.startup.is_enabled()
         self.state = QuotaState(timezone=self.settings.timezone)
@@ -678,7 +723,7 @@ class Controller(QObject):
             self.mode_actions[key] = action
         self.menu.addSeparator()
         self.refresh_action = self.menu.addAction('立即刷新', self.refresh)
-        self.menu.addAction('设置…', self.open_settings)
+        self.settings_action = self.menu.addAction('设置…', self.open_settings)
         self.startup_action = self.menu.addAction('开机启动')
         self.startup_action.setCheckable(True)
         self.startup_action.setChecked(self.settings.autostart)
@@ -708,6 +753,10 @@ class Controller(QObject):
         self.taskbar_watch.timeout.connect(self.maintain_taskbar)
         self.taskbar_watch.start(2000)
         self.app.aboutToQuit.connect(self.shutdown)
+
+    def apply_font(self):
+        self.app.setFont(make_font(self.settings.font, 12, 430))
+        self.app.setStyleSheet(component_style(asset(''), family(self.settings.font)))
 
     def maintain_taskbar(self):
         if self.quitting or self.settings.mode != 'taskbar':
@@ -783,6 +832,7 @@ class Controller(QObject):
                 self.settings_dialog.error_label.show()
                 self.startup_action.setChecked(old.autostart)
                 return
+        self.apply_font()
         self.startup_action.setChecked(self.settings.autostart)
         self.state.timezone = self.settings.timezone
         self.float.settings = self.settings
@@ -866,18 +916,24 @@ class Controller(QObject):
 
     def open_settings(self):
         self.popup.hide()
-        if self.settings_dialog and self.settings_dialog.isVisible():
-            self.settings_dialog.raise_()
-            self.settings_dialog.activateWindow()
-            return
-        self.settings.autostart = self.startup.is_enabled()
-        self.startup_action.setChecked(self.settings.autostart)
-        self.settings_dialog = SettingsDialog(self.settings, self.state)
-        self.settings_dialog.setWindowIcon(tray_icon(self.settings.icon, background=self.settings.background))
-        self.settings_dialog.saved.connect(self.apply_settings)
-        self.settings_dialog.show()
-        self.settings_dialog.raise_()
-        self.settings_dialog.activateWindow()
+        if not (self.settings_dialog and self.settings_dialog.isVisible()):
+            self.settings.autostart = self.startup.is_enabled()
+            self.startup_action.setChecked(self.settings.autostart)
+            self.settings_dialog = SettingsDialog(self.settings, self.state)
+            self.settings_dialog.setWindowIcon(tray_icon(self.settings.icon, background=self.settings.background))
+            self.settings_dialog.saved.connect(self.apply_settings)
+        dialog = self.settings_dialog
+        dialog.showNormal()
+        # STARTF_USESHOWWINDOW/SW_HIDE can hide the first native window while Qt
+        # still considers it visible. A subsequent explicit ShowWindow ignores
+        # that startup hint and also restores an already minimized dialog.
+        if sys.platform == 'win32':
+            user32 = ctypes.WinDLL('user32', use_last_error=True)
+            user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+            user32.ShowWindow.restype = wintypes.BOOL
+            user32.ShowWindow(int(dialog.winId()), 9)  # SW_RESTORE
+        dialog.raise_()
+        dialog.activateWindow()
 
     def shutdown(self):
         if self.quitting:
@@ -938,12 +994,10 @@ def main(argv=None):
     app.setApplicationDisplayName(APP_NAME)
     app.setApplicationVersion(__version__)
     app.setQuitOnLastWindowClosed(False)
-    font_id = QFontDatabase.addApplicationFont(str(asset('fonts/NotoSansSC-VF.ttf')))
-    interface_font = QFont(UI_FONT if font_id >= 0 else 'Microsoft YaHei UI', 9)
-    interface_font.setVariableAxis(QFont.Tag.fromString('wght'), 430)
-    app.setFont(interface_font)
-    app.setProperty('bundledFontId', font_id)
-    app.setStyleSheet(component_style(asset('')))
+    font_ids = register_fonts(asset('fonts'))
+    app.setFont(make_font('noto', 12, 430))
+    app.setProperty('bundledFontId', font_ids['noto'])
+    app.setStyleSheet(component_style(asset(''), family('noto')))
     app.setWindowIcon(tray_icon('#485F87'))
     path = args.settings_path or default_settings_path()
     if args.self_test:
