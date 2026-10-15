@@ -34,6 +34,12 @@ class ModesTests(unittest.TestCase):
         Controller.maintain_taskbar(obj)
         obj.dock.attach.assert_called_once()
         obj.float.setVisible.assert_called_once_with(True)
+    def test_taskbar_reserves_the_current_style_width(self):
+        from quota_monitor.taskbar import TaskbarDock
+        obj=Mock();obj.attached=True;obj.native.user.IsWindow.return_value=True
+        obj.widget.winId.return_value=123;obj.widget.logical_width=128
+        self.assertTrue(TaskbarDock.refresh(obj))
+        obj.native.reserve.assert_called_once_with(123,128)
     def test_legacy_tray_setting_migrates_and_unknown_types_are_safe(self):
         with tempfile.TemporaryDirectory() as folder:
             p=Path(folder)/'settings.json'

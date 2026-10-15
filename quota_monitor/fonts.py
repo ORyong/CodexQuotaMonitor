@@ -21,6 +21,9 @@ def register_fonts(directory):
         FONT_IDS[key] = font_id
         families = QFontDatabase.applicationFontFamilies(font_id)
         FAMILIES[key] = families[0] if families else 'Microsoft YaHei UI'
+    medium = directory / 'SourceHanSansCN-Medium.otf'
+    if medium.exists():
+        FONT_IDS['source_han_sans_medium'] = QFontDatabase.addApplicationFont(str(medium))
     return FONT_IDS.copy()
 
 

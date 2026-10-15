@@ -30,6 +30,12 @@
     "size": 4463
   },
   {
+    "file": "SourceHanSansCN-Medium.otf",
+    "source": "https://github.com/adobe-fonts/source-han-sans/releases/download/2.005R/19_SourceHanSansCN.zip",
+    "sha256": "a94e558a2fe972bee4f46bce0843abff37063fd68c33f1e7d9058f6f09432b01",
+    "size": 8406556
+  },
+  {
     "file": "SourceHanSansCN-Regular.otf",
     "source": "https://github.com/adobe-fonts/source-han-sans/releases/download/2.005R/19_SourceHanSansCN.zip",
     "sha256": "e2bc8a2e7f37474b774fff8db758681ece40bb6947a90d571bce9dd60671a8e4",

@@ -237,7 +237,7 @@ def start_self_test(controller, output: Path):
             picker.reject()
             dialog.scale.setValue(150)
             dialog.timezone.setCurrentIndex(dialog.timezone.findData('Asia/Shanghai'))
-            QTest.mouseClick(dialog.mode.buttons[list(MODES).index('both')], Qt.MouseButton.LeftButton)
+            dialog.mode.setCurrentIndex(dialog.mode.findData('both'))
             dialog.save()
             controller.app.processEvents()
             loaded = Settings.load(controller.settings_path)

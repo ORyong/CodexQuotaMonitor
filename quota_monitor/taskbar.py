@@ -138,7 +138,7 @@ class TaskbarDock(QObject):
         try:
             if not self.native.user.IsWindow(self.native.host):
                 raise DockError('任务栏正在重新启动')
-            self.last_info=self.native.reserve(int(self.widget.winId()),104)
+            self.last_info=self.native.reserve(int(self.widget.winId()),getattr(self.widget,'logical_width',104))
             self.error=None
             return True
         except (DockError,OSError) as error:

@@ -220,9 +220,13 @@ class Capsule(QWidget):
 class TaskbarCapsule(Capsule):
     def apply_settings(self):
         self.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
-        self.setFixedSize(104, 34)
+        self.update_geometry()
         self.logo = mark(self.settings.icon, 128)
         self.update()
+
+    def update_geometry(self):
+        self.logical_width = 128 if self.settings.display_style == 'rings' else 104
+        self.setFixedSize(self.logical_width, 34)
 
     def __init__(self, settings):
         super().__init__(settings)
@@ -233,8 +237,11 @@ class TaskbarCapsule(Capsule):
     def paintEvent(self, event):
         painter=QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.scale(self.width()/104,self.height()/34)
+        painter.scale(self.width()/self.logical_width,self.height()/34)
         if self.settings.display_style == "rings":
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(self.settings.background))
+            painter.drawRoundedRect(QRectF(0,0,128,34),17,17)
             draw_rings(painter, self.settings, self.state, compact=True)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(QColor(self.settings.background))
@@ -343,31 +350,6 @@ class DetailPopup(QFrame):
         self.adjustSize()
 
 
-class ModeSelector(QFrame):
-    """Three visible segmented buttons; no dropdown or hidden mode control."""
-    def __init__(self, selected):
-        super().__init__()
-        self.setObjectName('modeSelector')
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
-        self.group = QButtonGroup(self)
-        self.buttons = []
-        for index, (key, label) in enumerate(MODES.items()):
-            button = QPushButton(label)
-            button.setCheckable(True)
-            button.setChecked(key == selected)
-            button.setCursor(Qt.CursorShape.PointingHandCursor)
-            button.setObjectName('modeButton')
-            button.setFixedHeight(30)
-            self.group.addButton(button, index)
-            self.buttons.append(button)
-            layout.addWidget(button)
-
-    def currentData(self):
-        return list(MODES)[self.group.checkedId()]
-
-
 class ThemePicker(QWidget):
     chosen = Signal(str)
 
@@ -449,8 +431,6 @@ class SettingsDialog(QDialog):
         version.setObjectName('muted')
         header.addWidget(version)
         root.addLayout(header)
-        self.mode = ModeSelector(settings.mode)
-        root.addWidget(self.mode)
         cards = QHBoxLayout()
         cards.setSpacing(12)
         left = QFrame()
@@ -461,6 +441,14 @@ class SettingsDialog(QDialog):
         label = QLabel('显示与启动')
         label.setObjectName('cardTitle')
         left_layout.addWidget(label)
+        self.mode = ModernComboBox()
+        for key, name in MODES.items():
+            self.mode.addItem(name, key)
+        self.mode.setCurrentIndex(self.mode.findData(settings.mode))
+        self.mode.setFixedWidth(142)
+        self.mode.setToolTip('选择额度显示位置；后台托盘始终保留')
+        row = QHBoxLayout(); row.addWidget(QLabel('显示位置')); row.addStretch(); row.addWidget(self.mode)
+        left_layout.addLayout(row)
         self.display_style = ModernComboBox()
         self.display_style.addItem('胶囊', 'capsule')
         self.display_style.addItem('双圆环', 'rings')
@@ -592,7 +580,7 @@ class SettingsDialog(QDialog):
         self.error_label.hide()
         root.addWidget(self.error_label)
         footer = QHBoxLayout()
-        footnote = QLabel('设置保存在本机')
+        footnote = QLabel('托盘常驻 · 设置保存在本机')
         footnote.setObjectName('muted')
         footer.addWidget(footnote)
         footer.addStretch()
@@ -839,6 +827,7 @@ class Controller(QObject):
         self.float.settings = self.settings
         self.float.apply_settings()
         self.taskbar.settings = self.settings
+        self.taskbar.update_geometry()
         self.taskbar.logo = mark(self.settings.icon, 128)
         self.taskbar.update()
         self.recover_position()

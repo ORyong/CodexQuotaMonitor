@@ -1,6 +1,6 @@
 """Two remaining-quota rings, sharing the client's validated window values."""
 from __future__ import annotations
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtGui import QColor, QPen, QFontMetricsF
 from .fonts import make_font
 
@@ -24,16 +24,37 @@ def ring_data(state):
     return result
 
 
+def fitted_font(key, value, pixels, max_width, max_height, weight=400):
+    font = make_font(key, pixels, weight)
+    while font.pixelSize() > 6:
+        box = QFontMetricsF(font).tightBoundingRect(value)
+        if box.width() <= max_width and box.height() <= max_height:
+            break
+        font.setPixelSize(font.pixelSize()-1)
+    return font
+
+
+def centered_text(painter, key, value, cx, cy, pixels, max_width, max_height, weight=400):
+    font = fitted_font(key, value, pixels, max_width, max_height, weight)
+    box = QFontMetricsF(font).tightBoundingRect(value)
+    painter.setFont(font)
+    # Baseline positioning uses actual ink bounds; a short line rectangle can
+    # clip CJK ascenders, percent signs or oblique glyph overhangs.
+    painter.drawText(QPointF(cx-box.center().x(), cy-box.center().y()), value)
+
+
 def draw_rings(painter, settings, state, compact=False):
     data = ring_data(state)
+    painter.setRenderHint(painter.RenderHint.TextAntialiasing, True)
     text = QColor(settings.text)
     track = QColor(settings.icon); track.setAlpha(55)
     accent = QColor(settings.icon)
     if compact:
-        centers, cy, radius, stroke = (46, 86), 17, 14, 2
+        centers, cy, radius, stroke = (56, 108), 17, 14, 2
     else:
         centers, cy, radius, stroke = (36, 108), 34, 26, 4
-    for center, row in zip(centers, data):
+    weight = 600 if settings.font == 'noto' else (500 if settings.font == 'source_han_sans' else 400)
+    for index, (center, row) in enumerate(zip(centers, data)):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(settings.background))
         outer = radius + (2 if compact else 6)
@@ -49,15 +70,14 @@ def draw_rings(painter, settings, state, compact=False):
                 painter.drawEllipse(rect)
             else:
                 painter.drawArc(rect, 90*16, -round(row['remaining']*360*16/100))
-        font = make_font(settings.font, 9 if compact else 15, 600)
-        while QFontMetricsF(font).horizontalAdvance(row['value']) > radius*2-stroke*2 and font.pixelSize() > 7:
-            font.setPixelSize(font.pixelSize()-1)
-        painter.setFont(font); painter.setPen(text)
-        painter.drawText(QRectF(center-radius, cy-(10 if compact else 15), radius*2, 13 if compact else 21), Qt.AlignmentFlag.AlignCenter, row['value'])
-        label = row['short_label'] if compact else row['label']
-        painter.setFont(make_font(settings.font, 7 if compact else 10))
-        muted = QColor(text); muted.setAlpha(210); painter.setPen(muted)
-        painter.drawText(QRectF(center-radius, cy+(3 if compact else 7), radius*2, 10 if compact else 16), Qt.AlignmentFlag.AlignCenter, label)
+        painter.setPen(text)
+        centered_text(painter, settings.font, row['value'], center, cy if compact else cy-6,
+                      12 if compact else 17, radius*2-stroke*2, 24 if compact else 22, weight)
+        muted = QColor(text); muted.setAlpha(235); painter.setPen(muted)
+        if compact:
+            centered_text(painter, settings.font, row['short_label'], (31,83)[index], cy, 9, 16, 24)
+        else:
+            centered_text(painter, settings.font, row['label'], center, cy+12, 11, 42, 16)
     if state.error:
         painter.setBrush(QColor('#F4B860')); painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(QRectF(99 if compact else 134, 1 if compact else 3, 4, 4))
+        painter.drawEllipse(QRectF(123 if compact else 134, 1 if compact else 3, 4, 4))
