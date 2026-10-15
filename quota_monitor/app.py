@@ -759,10 +759,11 @@ class Controller(QObject):
         self.app.setStyleSheet(component_style(asset(''), family(self.settings.font)))
 
     def maintain_taskbar(self):
-        if self.quitting or self.settings.mode != 'taskbar':
+        if self.quitting or self.settings.mode not in ('taskbar', 'both'):
             return
         if not self.dock.attached:
-            self.float.setVisible(not self.dock.attach())
+            attached = self.dock.attach()
+            self.float.setVisible(self.settings.mode == 'both' or not attached)
         elif not self.dock.refresh():
             self.float.show()
 
@@ -792,13 +793,13 @@ class Controller(QObject):
 
     def apply_mode(self):
         tray_available = QSystemTrayIcon.isSystemTrayAvailable()
-        self.tray.setVisible(self.settings.mode != 'float' and tray_available)
-        if self.settings.mode == 'taskbar':
+        self.tray.setVisible(tray_available)
+        if self.settings.mode in ('taskbar', 'both'):
             embedded = self.dock.attach()
-            self.float.setVisible(not embedded)
+            self.float.setVisible(self.settings.mode == 'both' or not embedded)
         else:
             self.dock.detach()
-            self.float.setVisible(self.settings.mode in ('float','both') or not tray_available)
+            self.float.setVisible(True)
         for key, action in self.mode_actions.items():
             action.setChecked(key == self.settings.mode)
 

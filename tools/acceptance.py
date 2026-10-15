@@ -68,7 +68,7 @@ def verify_settings_startups(exe, results):
         label = 'hidden' if hidden else 'normal'
         settings_path = VALIDATION / ('settings-startup-' + label) / 'settings.json'
         settings_path.parent.mkdir(parents=True, exist_ok=True)
-        settings_path.write_text(json.dumps({'mode':'tray'}), encoding='utf-8')
+        settings_path.write_text(json.dumps({'mode':'float'}), encoding='utf-8')
         startup = subprocess.STARTUPINFO()
         startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startup.wShowWindow = 0 if hidden else 1

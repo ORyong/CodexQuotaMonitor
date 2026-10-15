@@ -17,7 +17,7 @@ PRESETS = {
     "梅紫": ("#665078", "#FFF0FA", "#F4D9F1"),
     "浅色": ("#E6ECF5", "#28364C", "#405779"),
 }
-MODES = {"taskbar": "任务栏", "tray": "仅托盘", "float": "仅悬浮窗", "both": "悬浮+托盘"}
+MODES = {"taskbar": "任务栏", "float": "悬浮窗", "both": "同时显示"}
 
 
 def default_settings_path() -> Path:
@@ -49,11 +49,14 @@ class Settings:
                 return result
             if valid_timezone(data.get("timezone")):
                 result.timezone = data["timezone"]
-            if data.get("mode") in MODES:
-                result.mode = data["mode"]
+            mode = data.get("mode")
+            if mode == "tray":
+                result.mode = "taskbar"
+            elif isinstance(mode, str) and mode in MODES:
+                result.mode = mode
             if data.get("display_style") in ("capsule", "rings"):
                 result.display_style = data["display_style"]
-            if data.get("font") in FONT_OPTIONS:
+            if isinstance(data.get("font"), str) and data["font"] in FONT_OPTIONS:
                 result.font = data["font"]
             for name, lower, upper in [("scale", 75, 200), ("refresh_seconds", 30, 3600)]:
                 value = data.get(name)

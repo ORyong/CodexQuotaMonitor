@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 os.chdir(ROOT)
 sys.path.insert(0, str(ROOT))
 from quota_monitor import __version__ as VERSION
+RELEASE_DIST = ROOT / "dist" / ("V" + VERSION)
 
 
 def main():
@@ -24,6 +25,7 @@ def main():
     Image.open(ROOT / 'assets/app.png').save(ROOT / 'assets/app.ico', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])
     app.quit()
     command = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--windowed',
+        '--distpath', str(RELEASE_DIST),
         '--name', 'CodexQuotaMonitor', '--icon', str(ROOT / 'assets/app.ico'),
         '--add-data', str(ROOT / 'assets') + os.pathsep + 'assets',
         '--collect-data', 'tzdata',
@@ -39,20 +41,20 @@ def main():
     build_env['PATH'] = os.pathsep.join(map(str, [python, python / 'Scripts', windows / 'System32', windows]))
     subprocess.run(command, check=True, env=build_env)
     # README is deliberately omitted from this release.
-    previous_readme = ROOT / 'dist/CodexQuotaMonitor/使用说明.md'
+    previous_readme = RELEASE_DIST / 'CodexQuotaMonitor/使用说明.md'
     previous_readme.unlink(missing_ok=True)
     if (ROOT / 'VALIDATION.md').exists():
-        shutil.copy2(ROOT / 'VALIDATION.md', ROOT / 'dist/CodexQuotaMonitor/验证说明.md')
+        shutil.copy2(ROOT / 'VALIDATION.md', RELEASE_DIST / 'CodexQuotaMonitor/验证说明.md')
     package()
 
 
 def package():
     dist = ROOT / 'dist'
-    app_dir = dist / 'CodexQuotaMonitor'
+    app_dir = RELEASE_DIST / 'CodexQuotaMonitor'
     with zipfile.ZipFile(dist / f'CodexQuotaMonitor-{VERSION}-Windows-x64.zip', 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for path in sorted(app_dir.rglob('*')):
             if path.is_file():
-                archive.write(path, path.relative_to(dist))
+                archive.write(path, path.relative_to(RELEASE_DIST))
     with zipfile.ZipFile(dist / f'CodexQuotaMonitor-{VERSION}-source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
         sources = [ROOT / n for n in ('main.py', 'requirements.txt', 'VALIDATION.md', '.gitignore')]
         for folder, pattern in [('quota_monitor','*.py'),('tests','*.py'),('tools','*.py'),('assets','*.svg'),('assets','*.ico')]:

@@ -170,13 +170,14 @@ def start_self_test(controller, output: Path):
             controller.settings_dialog.reject()
             controller.popup.hide()
             restore_width=controller.dock.native.baseline[2]
-            for mode in ('tray', 'float', 'both'):
+            for mode in ('float', 'both', 'taskbar'):
                 controller.set_mode(mode)
                 controller.app.processEvents()
-                if mode=='tray':
+                if mode=='float':
                     record('taskbar_gap_restored_on_mode_switch', controller.dock.native.rect(controller.dock.native.rebar)[2]==restore_width)
-                record('mode_' + mode, controller.tray.isVisible() == (mode != 'float')
-                       and controller.float.isVisible() == (mode != 'tray'))
+                record('mode_' + mode, controller.tray.isVisible()
+                       and controller.float.isVisible() == (mode != 'taskbar')
+                       and controller.dock.attached == (mode != 'float'))
                 controller.show_details()
                 QTest.mouseClick(controller.popup.settings_button, Qt.MouseButton.LeftButton)
                 controller.app.processEvents()
@@ -266,7 +267,7 @@ def start_self_test(controller, output: Path):
             controller.app.processEvents()
             record('rings_taskbar_inside_shell', controller.dock.diagnostic()['inside_taskbar'] and controller.dock.diagnostic()['no_overlap'])
             controller.taskbar.grab().save(str(output/'rings-taskbar.png'))
-            controller.set_mode('both')
+            controller.set_mode('float')
             for font_key in FONT_OPTIONS:
                 record('font_loaded_' + font_key, FONT_IDS.get(font_key,-1) >= 0)
                 controller.open_settings()
