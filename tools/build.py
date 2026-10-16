@@ -40,9 +40,14 @@ def main():
     python = Path(sys.executable).parent
     build_env['PATH'] = os.pathsep.join(map(str, [python, python / 'Scripts', windows / 'System32', windows]))
     subprocess.run(command, check=True, env=build_env)
-    # README is deliberately omitted from this release.
-    previous_readme = RELEASE_DIST / 'CodexQuotaMonitor/使用说明.md'
-    previous_readme.unlink(missing_ok=True)
+    if (ROOT / 'README.md').exists():
+        shutil.copy2(ROOT / 'README.md', RELEASE_DIST / 'CodexQuotaMonitor/使用说明.md')
+    if (ROOT / 'docs/images').exists():
+        shutil.copytree(ROOT / 'docs/images', RELEASE_DIST / 'CodexQuotaMonitor/docs/images', dirs_exist_ok=True)
+    if (ROOT / 'README.md').exists():
+        readme_assets = RELEASE_DIST / 'CodexQuotaMonitor/assets'
+        readme_assets.mkdir(exist_ok=True)
+        shutil.copy2(ROOT / 'assets/app.png', readme_assets / 'app.png')
     if (ROOT / 'VALIDATION.md').exists():
         shutil.copy2(ROOT / 'VALIDATION.md', RELEASE_DIST / 'CodexQuotaMonitor/验证说明.md')
     package()
@@ -56,10 +61,11 @@ def package():
             if path.is_file():
                 archive.write(path, path.relative_to(RELEASE_DIST))
     with zipfile.ZipFile(dist / f'CodexQuotaMonitor-{VERSION}-source.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
-        sources = [ROOT / n for n in ('main.py', 'requirements.txt', 'VALIDATION.md', '.gitignore')]
-        for folder, pattern in [('quota_monitor','*.py'),('tests','*.py'),('tools','*.py'),('assets','*.svg'),('assets','*.ico')]:
+        sources = [ROOT / n for n in ('main.py', 'requirements.txt', 'README.md', 'VALIDATION.md', '.gitignore')]
+        for folder, pattern in [('quota_monitor','*.py'),('tests','*.py'),('tools','*.py'),('assets','*.svg'),('assets','*.ico'),('assets','*.png')]:
             sources.extend((ROOT / folder).glob(pattern))
         sources.extend((ROOT / 'assets/fonts').glob('*'))
+        sources.extend((ROOT / 'docs/images').glob('*.png'))
         for path in sorted(sources):
             archive.write(path, path.relative_to(ROOT))
     print('Runtime ZIP and source ZIP created in', dist)

@@ -14,11 +14,12 @@ from quota_monitor import __version__ as VERSION
 
 
 def publication_files():
-    files = [ROOT / name for name in ('main.py', 'requirements.txt', 'VALIDATION.md', '.gitignore')]
+    files = [ROOT / name for name in ('main.py', 'requirements.txt', 'README.md', 'VALIDATION.md', '.gitignore')]
     for folder, pattern in [('quota_monitor', '*.py'), ('tests', '*.py'), ('tools', '*.py'),
                             ('assets', '*.svg'), ('assets', '*.ico'), ('assets', '*.png')]:
         files.extend((ROOT / folder).glob(pattern))
     files.extend(path for path in (ROOT / 'assets/fonts').glob('*') if path.is_file())
+    files.extend((ROOT / 'docs/images').glob('*.png'))
     return sorted(set(files))
 
 
